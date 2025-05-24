@@ -1,0 +1,56 @@
+---
+- name: Deploy FreeIPA domain controllers
+  hosts: freeipa
+  become: true
+  roles:
+    - freeipa
+
+- name: Deploy GitLab CE
+  hosts: gitlab
+  become: true
+  roles:
+    - gitlab
+
+- name: Bootstrap Kubernetes control plane
+  hosts: k8s_masters
+  become: true
+  roles:
+    - role: k8s
+      tasks_from: bootstrap.yml
+
+- name: Join Kubernetes workers
+  hosts: k8s_workers
+  become: true
+  roles:
+    - role: k8s
+      tasks_from: join.yml
+
+- name: Deploy Ceph storage cluster
+  hosts: ceph
+  become: true
+  roles:
+    - ceph
+
+- name: Deploy Prometheus monitoring
+  hosts: prometheus
+  become: true
+  roles:
+    - prometheus
+
+- name: Deploy Grafana dashboard
+  hosts: grafana
+  become: true
+  roles:
+    - grafana
+
+- name: Deploy Moodle for testing cycle
+  hosts: moodle
+  become: true
+  roles:
+    - moodle
+
+- name: Configure VyOS firewall/router
+  hosts: firewall
+  gather_facts: false
+  roles:
+    - firewall
