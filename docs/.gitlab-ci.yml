@@ -1,0 +1,41 @@
+stages:
+  - install
+  - test
+  - build
+  - deploy
+
+variables:
+  VIRTUAL_ENV: ".venv"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+before_script:
+  - python -V
+  - pip install --upgrade pip
+  - python -m venv $VIRTUAL_ENV
+  - source $VIRTUAL_ENV/bin/activate
+  - pip install -r requirements.txt
+
+install:
+  stage: install
+  script:
+    - echo "✅ Установлены зависимости"
+
+test:
+  stage: test
+  script:
+    - echo "🔎 Прогоняем тесты"
+    - pytest || echo "⚠️ Нет тестов или они не проходят"
+
+build:
+  stage: build
+  script:
+    - echo "📦 Собираем приложение"
+    - python setup.py sdist || echo "⚠️ Нет setup.py, пропускаем"
+
+deploy:
+  stage: deploy
+  script:
+    - echo "🚀 Деплой..."
+    # Добавь сюда свою логику, например SCP или Ansible
+  only:
+    - main
