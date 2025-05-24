@@ -1,0 +1,23 @@
+---
+# Дефолтные переменные для роли FreeIPA
+
+ipa_realm: XSOFT.LOCAL                # Kerberos-realm
+ipa_domain: xsoft.local               # DNS-домен
+ipa_admin_user: admin                 # учётка администратора FreeIPA
+ipa_admin_password: ChangeMe123       # пароль администратора (рекомендуется хранить в Vault)
+ipa_directory_manager_password: DirManSecret  # пароль Directory Manager
+
+# Список пакетов для установки
+ipa_extra_packages:
+  - ipa-server
+  - ipa-server-dns
+  - bind-dyndb-ldap
+
+# Опции для unattended-установки
+ipa_setup_options:
+  - --unattended
+  - --ds-password={{ ipa_directory_manager_password }}
+  - --admin-password={{ ipa_admin_password }}
+  - --realm={{ ipa_realm }}
+  - --domain={{ ipa_domain }}
+  - --no-host-dns
