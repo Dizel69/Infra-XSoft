@@ -1,0 +1,19 @@
+ansible_user: ansible
+ansible_become: true
+
+timezone: Europe/Moscow
+
+packages_common:
+  - curl
+  - wget
+  - vim
+  - net-tools
+  - htop
+
+docker_version: "24.0"
+
+# Общие параметры GitLab, Moodle и т.д.
+domain_name: "example.com"
+
+# Секреты (по-хорошему, выносить в Ansible Vault)
+admin_password: "changeme"
