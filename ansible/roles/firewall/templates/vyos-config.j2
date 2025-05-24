@@ -1,0 +1,33 @@
+configure
+
+# Настройка интерфейсов
+set interfaces ethernet {{ ext_if }} description 'External to Internet'
+set interfaces ethernet {{ ext_if }} address dhcp
+set interfaces ethernet {{ int_if }} description 'Internal Infrastructure'
+set interfaces ethernet {{ int_if }} address 10.0.1.1/24
+
+# NAT (MASQUERADE) на внешнем интерфейсе
+{% if nat_out %}
+set nat source rule 100 outbound-interface {{ ext_if }}
+set nat source rule 100 source address 10.0.1.0/24
+set nat source rule 100 translation address masquerade
+{% endif %}
+
+# Базовый firewall для внутренних/внешних зон
+set firewall name OUTSIDE_IN default-action drop
+{% for r in firewall_rules %}
+set firewall name OUTSIDE_IN rule {{ loop.index0 + 10 }} action {{ r.action }}
+set firewall name OUTSIDE_IN rule {{ loop.index0 + 10 }} protocol {{ r.protocol }}
+{% if r.destination_port is defined %}
+set firewall name OUTSIDE_IN rule {{ loop.index0 + 10 }} destination port {{ r.destination_port }}
+{% endif %}
+set firewall name OUTSIDE_IN rule {{ loop.index0 + 10 }} description '{{ r.description }}'
+{% endfor %}
+
+# Привязка firewall к интерфейсу
+set interfaces ethernet {{ ext_if }} firewall in name OUTSIDE_IN
+
+# Сохранение и выход
+commit
+save
+exit
