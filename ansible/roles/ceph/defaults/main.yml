@@ -1,0 +1,28 @@
+---
+# Дефолтные переменные для роли Ceph
+
+# Версия Ceph (пакеты из репозитория)
+ceph_version: "octopus"                         # например: luminous, mimic, nautilus, octopus
+
+# Сеть для публичного трафика (клиенты, MON, MGR)
+ceph_public_network: "10.0.1.0/24"
+
+# Сеть для внутренней кластерной репликации (OSD → OSD)
+ceph_cluster_network: "10.0.1.0/24"
+
+# Список хостов-мониторов
+ceph_mon_hosts:
+  - ceph1
+  - ceph2
+  - ceph3
+
+# Диск(и) для OSD на каждом узле (можно список)
+ceph_osd_devices:
+  - "/dev/sdb"
+  - "/dev/sdc"
+
+# FSID кластера (если оставить пустым, сгенерируется автоматически)
+ceph_fsid: ""
+
+# Количество копий данных (replica size)
+ceph_replica_size: 3
