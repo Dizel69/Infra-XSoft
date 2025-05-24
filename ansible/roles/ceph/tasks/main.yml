@@ -1,0 +1,106 @@
+---
+# 1) Устанавливаем Ceph-репозиторий и пакеты
+- name: Add Ceph repository key
+  apt_key:
+    url: https://download.ceph.com/keys/release.asc
+    state: present
+  become: true
+
+- name: Add Ceph apt repository
+  apt_repository:
+    repo: deb https://download.ceph.com/debian-${ceph_version}/ $(lsb_release -sc) main
+    state: present
+  become: true
+
+- name: Install Ceph packages
+  apt:
+    name:
+      - ceph
+      - ceph-common
+      - ceph-mon
+      - ceph-osd
+      - ceph-mgr
+    state: latest
+    update_cache: yes
+  become: true
+
+# 2) Генерируем FSID, если не задан в defaults
+- name: Generate cluster FSID if not defined
+  set_fact:
+    ceph_fsid: "{{ lookup('pipe','uuidgen') }}"
+  when: ceph_fsid == ""
+  changed_when: ceph_fsid != ""
+
+# 3) Раскладываем шаблон ceph.conf на все узлы
+- name: Render /etc/ceph/ceph.conf
+  template:
+    src: ceph.conf.j2
+    dest: /etc/ceph/ceph.conf
+    owner: root
+    group: root
+    mode: '0644'
+  vars:
+    fsid: "{{ ceph_fsid }}"
+    mon_hosts: "{{ ceph_mon_hosts }}"
+    public_network: "{{ ceph_public_network }}"
+    cluster_network: "{{ ceph_cluster_network }}"
+    replica_size: "{{ ceph_replica_size }}"
+  become: true
+
+# 4) Инициализируем мониторы (только на первом мон-хосте)
+- name: Create initial monitor keyring and map
+  shell: |
+    ceph-authtool --create-keyring /tmp/ceph.mon.keyring \
+      --gen-key -n mon. --cap mon 'allow *'
+    ceph-authtool --create-keyring /etc/ceph/ceph.client.admin.keyring \
+      --gen-key -n client.admin --cap mon 'allow *' \
+      --cap osd 'allow *' --cap mgr 'allow *' --cap mds 'allow'
+    monmaptool --create --add {{ inventory_hostname }} {{ ansible_default_ipv4.address }} --fsid {{ ceph_fsid }} /tmp/monmap
+  args:
+    creates: /etc/ceph/ceph.client.admin.keyring
+  when: inventory_hostname == ceph_mon_hosts[0]
+  become: true
+
+- name: Bootstrap monitor daemon on first monitor
+  shell: |
+    mkdir -p /var/lib/ceph/mon/ceph-{{ inventory_hostname }}
+    ceph-mon --mkfs -i {{ inventory_hostname }} --monmap /tmp/monmap \
+      --keyring /tmp/ceph.mon.keyring
+  when: inventory_hostname == ceph_mon_hosts[0]
+  become: true
+
+# 5) Запускаем и подключаем остальных мониторов
+- name: Create monitor data dir on other monitors
+  file:
+    path: /var/lib/ceph/mon/ceph-{{ inventory_hostname }}
+    state: directory
+    owner: ceph
+    group: ceph
+    mode: '0755'
+  when: inventory_hostname != ceph_mon_hosts[0]
+  become: true
+
+- name: Add monitor keys on other monitors
+  shell: |
+    ceph auth get mon. -o /tmp/ceph.mon.keyring
+    ceph-mon --mkfs -i {{ inventory_hostname }} --monmap /tmp/monmap \
+      --keyring /tmp/ceph.mon.keyring
+  when: inventory_hostname != ceph_mon_hosts[0]
+  become: true
+
+- name: Start ceph-mon service
+  service:
+    name: ceph-mon@{{ inventory_hostname }}
+    state: started
+    enabled: true
+  become: true
+
+# 6) Настраиваем OSD на каждом узле
+- name: Prepare and activate OSD(s)
+  shell: |
+    for dev in {{ ceph_osd_devices | join(' ') }}; do
+      ceph-volume lvm create --data $dev
+    done
+  args:
+    creates: /dev/ceph-{{ inventory_hostname }}-osd-*
+  become: true
