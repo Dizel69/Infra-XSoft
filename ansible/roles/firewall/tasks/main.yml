@@ -1,0 +1,48 @@
+---
+- name: Ensure vyos_api Python library is installed
+  pip:
+    name: vyos-api
+    state: latest
+  become: true
+
+- name: Generate VyOS configuration script
+  template:
+    src: vyos-config.j2
+    dest: /tmp/vyos-config.boot
+    mode: '0644'
+  vars:
+    ext_if: "{{ external_interface }}"
+    int_if: "{{ internal_interface }}"
+    firewall_rules: "{{ firewall_rules }}"
+    nat_out: "{{ nat_outside }}"
+  become: true
+
+- name: Push configuration to VyOS via API
+  vars:
+    api_url: "https://{{ vyos_api_host }}:{{ vyos_api_port }}/configurations/commands"
+  uri:
+    url: "{{ api_url }}"
+    method: POST
+    user: "{{ vyos_api_user }}"
+    password: "{{ vyos_api_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    headers:
+      Content-Type: "application/json"
+    body: >
+      {
+        "commands": {{ lookup('file', '/tmp/vyos-config.boot') | to_json }}
+      }
+    status_code: 200
+  become: false
+
+- name: Save VyOS configuration
+  uri:
+    url: "https://{{ vyos_api_host }}:{{ vyos_api_port }}/configurations/save"
+    method: POST
+    user: "{{ vyos_api_user }}"
+    password: "{{ vyos_api_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    status_code: 200
+  become: false
