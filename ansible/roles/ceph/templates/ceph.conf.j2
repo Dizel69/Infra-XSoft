@@ -1,0 +1,16 @@
+[global]
+fsid = {{ fsid }}
+mon_initial_members = {% for host in mon_hosts %}{{ host }}{% if not loop.last %}, {% endif %}{% endfor %}
+mon_host = {% for host in mon_hosts %}{{ host }}{% if not loop.last %}, {% endif %}{% endfor %}
+public_network = {{ public_network }}
+cluster_network = {{ cluster_network }}
+auth_cluster_required = cephx
+auth_service_required = cephx
+auth_client_required = cephx
+osd_pool_default_pg_num = 128
+osd_pool_default_pgp_num = 128
+osd_pool_default_size = {{ replica_size }}
+osd_crush_chooseleaf_type = 1
+
+[mon]
+mon_data_avail_warn = 10
