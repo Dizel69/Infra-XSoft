@@ -1,0 +1,57 @@
+---
+# Добавляем официальный репозиторий Grafana
+- name: Add Grafana GPG key
+  apt_key:
+    url: https://packages.grafana.com/gpg.key
+    state: present
+  become: true
+
+- name: Add Grafana apt repository
+  apt_repository:
+    repo: "deb https://packages.grafana.com/oss/deb stable main"
+    state: present
+  become: true
+
+# Устанавливаем пакет grafana
+- name: Install Grafana package
+  apt:
+    name: "grafana={{ grafana_version }}"
+    state: present
+    update_cache: yes
+  become: true
+
+# Убедимся, что служба Grafana включена и запущена
+- name: Enable and start Grafana service
+  systemd:
+    name: grafana-server
+    enabled: true
+    state: started
+  become: true
+
+# Ждём, пока API Grafana не станет доступным
+- name: Wait for Grafana HTTP API
+  uri:
+    url: http://localhost:3000/api/health
+    status_code: 200
+    user: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    force_basic_auth: true
+  register: grafana_health
+  retries: 10
+  delay: 5
+  until: grafana_health.status == 200
+  become: false
+
+# Добавляем Datasource в Grafana через HTTP API
+- name: Configure Prometheus datasource
+  uri:
+    url: http://localhost:3000/api/datasources
+    method: POST
+    user: "{{ admin_user }}"
+    password: "{{ admin_password }}"
+    force_basic_auth: true
+    headers:
+      Content-Type: "application/json"
+    body: "{{ lookup('template', 'datasource.yml.j2') }}"
+    status_code: 200,409     # 409 — уже существует
+  become: false
