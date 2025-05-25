@@ -1,0 +1,18 @@
+---
+# Дефолтные переменные для роли GitLab CE
+
+# Внешний URL для доступа к веб-интерфейсу
+gitlab_external_url: "https://gitlab.{{ domain_name }}"
+
+# SSH-порт для git-подключений
+gitlab_ssh_port: 22
+
+# SMTP-настройки для оповещений (можно переопределить в group_vars или Vault)
+gitlab_smtp_enable: true
+gitlab_smtp_address: "smtp.{{ domain_name }}"
+gitlab_smtp_port: 587
+gitlab_smtp_user_name: "gitlab@{{ domain_name }}"
+gitlab_smtp_password: "SMTP_Password"        # хранить в Vault
+gitlab_smtp_domain: "{{ domain_name }}"
+gitlab_smtp_authentication: "login"
+gitlab_smtp_enable_starttls_auto: true
