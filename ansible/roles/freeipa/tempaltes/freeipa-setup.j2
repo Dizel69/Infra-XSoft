@@ -1,0 +1,7 @@
+[global]
+realm = {{ ipa_realm }}
+base_dn = dc={{ ipa_domain.split('.') | join(',dc=') }}
+
+[domain_realm]
+.{{ ipa_domain }} = {{ ipa_realm }}
+{{ ipa_domain }} = {{ ipa_realm }}
