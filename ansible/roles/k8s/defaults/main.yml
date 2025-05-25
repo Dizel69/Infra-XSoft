@@ -1,0 +1,12 @@
+---
+# дефолтные переменные для роли k8s
+
+k8s_version: "1.24.0-00"                # версия пакетов kubeadm/kubelet/kubectl
+container_runtime: "docker"             # «docker» или «cri-o»
+pod_network_cidr: "192.168.0.0/16"      # CIDR для сети подов
+service_cidr: "10.96.0.0/12"            # CIDR для Service-сети
+control_plane_endpoint: "k8s-master1.xsoft.local:6443"  
+
+# можно взять FQDN или VIP + порт
+join_token_ttl: "24h"                   # время жизни токена для join
+discovery_token_ca_cert_hash: ""        # заполняется после init
