@@ -1,0 +1,39 @@
+# GitLab external URL
+external_url '{{ external_url }}'
+
+# SSH port
+gitlab_rails['gitlab_shell_ssh_port'] = {{ ssh_port }}
+
+# SMTP settings
+{% if smtp_enable %}
+gitlab_rails['smtp_enable'] = true
+gitlab_rails['smtp_address'] = '{{ smtp_address }}'
+gitlab_rails['smtp_port'] = {{ smtp_port }}
+gitlab_rails['smtp_user_name'] = '{{ smtp_user_name }}'
+gitlab_rails['smtp_password'] = '{{ smtp_password }}'
+gitlab_rails['smtp_domain'] = '{{ smtp_domain }}'
+gitlab_rails['smtp_authentication'] = '{{ smtp_authentication }}'
+gitlab_rails['smtp_enable_starttls_auto'] = {{ smtp_starttls | lower }}
+{% else %}
+gitlab_rails['smtp_enable'] = false
+{% endif %}
+
+# Uncomment and adjust to enable LDAP integration
+# gitlab_rails['ldap_enabled'] = true
+# gitlab_rails['ldap_servers'] = YAML.load <<-'EOS'
+# main:
+#   label: 'LDAP'
+#   host: '_your_ldap_server_'
+#   port: 389
+#   uid: 'uid'
+#   bind_dn: 'cn=binduser,dc=example,dc=com'
+#   password: '_your_bind_password_'
+#   encryption: 'plain' # "start_tls" or "simple_tls" or "plain"
+#   verify_certificates: true
+#   smartcard_auth: false
+#   active_directory: false
+#   allow_username_or_email_login: false
+#   block_auto_created_users: false
+#   base: 'dc=example,dc=com'
+#   user_filter: ''
+# EOS
