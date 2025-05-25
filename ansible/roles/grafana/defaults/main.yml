@@ -1,0 +1,18 @@
+---
+# Дефолтные переменные для роли Grafana
+
+grafana_version: "9.5.0"                # версия Grafana CE
+grafana_install_dir: "/usr/share/grafana" # каталог установки (по умолчанию для пакетов)
+grafana_user: "grafana"                 # системный пользователь
+grafana_group: "grafana"                # системная группа
+
+# URL и креденшлы для подключения к Prometheus как источнику данных
+datasource_name: "Prometheus"
+datasource_type: "prometheus"
+datasource_url: "http://localhost:9090"  # адрес Prometheus
+datasource_access: "proxy"
+datasource_is_default: true
+
+# Данные для аутентификации Grafana (можно держать в Vault)
+admin_user: "admin"
+admin_password: "admin"                  # при первом старте Grafana предложит изменить
