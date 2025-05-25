@@ -1,0 +1,52 @@
+---
+# Устанавливаем необходимые пакеты
+- name: Install FreeIPA packages
+  yum:
+    name: "{{ ipa_extra_packages }}"
+    state: present
+  become: true
+
+# Включаем и настраиваем firewalld
+- name: Ensure firewalld is running
+  service:
+    name: firewalld
+    state: started
+    enabled: true
+  become: true
+
+- name: Open FreeIPA ports in firewalld
+  firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  loop:
+    - ldap
+    - kerberos
+    - kpasswd
+    - dns
+  become: true
+
+# Запускаем unattended установку
+- name: Run FreeIPA server install unattended
+  command: >
+    ipa-server-install {{ ipa_setup_options | join(' ') }}
+  args:
+    creates: /etc/ipa/default.conf
+  become: true
+
+# Добавляем A-запись в DNS
+- name: Add DNS A record for this host
+  command: >
+    ipa dnsrecord-add {{ ipa_domain }} {{ ansible_fqdn }} --a-ip-address={{ ansible_default_ipv4.address }}
+  when: ipa_domain is defined
+  become: true
+
+# Получаем Kerberos-токен для дальнейших задач
+- name: Obtain Kerberos ticket
+  shell: |
+    echo {{ ipa_admin_password }} | kinit {{ ipa_admin_user }}
+  args:
+    creates: /tmp/krb5_ticket
+  changed_when: false
+  become: true
