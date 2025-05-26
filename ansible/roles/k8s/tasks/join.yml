@@ -1,0 +1,26 @@
+---
+- name: Disable swap
+  ansible.builtin.command: swapoff -a
+  become: true
+
+- name: Ensure swap disabled on reboot
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(.*\sswap\s.*)$'
+    replace: '# \1'
+  become: true
+
+# (Затем те же задачи по установке container runtime и Kubernetes-пакетов, как в bootstrap)
+
+- name: Join node to cluster
+  ansible.builtin.command: >
+    kubeadm join {{ control_plane_endpoint }}
+    --token {{ lookup('env','KUBEADM_TOKEN') }}
+    --discovery-token-ca-cert-hash sha256:{{ discovery_token_ca_cert_hash }}
+  args:
+    creates: /etc/kubernetes/kubelet.conf
+  environment:
+    KUBEADM_TOKEN: "{{ hostvars[groups['k8s_masters'][0]].kubeadm_init.stdout_lines
+                     | select('search','kubeadm join')
+                     | list | first | regex_replace('.*--token ','') }}"
+  become: true
