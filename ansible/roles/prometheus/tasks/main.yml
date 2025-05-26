@@ -1,0 +1,100 @@
+---
+# Создаём системного пользователя и группу
+- name: Ensure prometheus group exists
+  group:
+    name: "{{ prometheus_group }}"
+    system: true
+  become: true
+
+- name: Ensure prometheus user exists
+  user:
+    name: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    shell: /sbin/nologin
+    system: true
+  become: true
+
+# Скачиваем и распаковываем бинарь
+- name: Download Prometheus tarball
+  get_url:
+    url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/prometheus-{{ prometheus_version }}.tar.gz"
+    mode: '0644'
+  become: true
+
+- name: Extract Prometheus archive
+  unarchive:
+    src: "/tmp/prometheus-{{ prometheus_version }}.tar.gz"
+    dest: "{{ prometheus_install_dir }}"
+    remote_src: true
+    creates: "{{ prometheus_install_dir }}/prometheus-{{ prometheus_version }}.linux-amd64/prometheus"
+  become: true
+
+- name: Symlink current Prometheus
+  file:
+    src: "{{ prometheus_install_dir }}/prometheus-{{ prometheus_version }}.linux-amd64"
+    dest: "{{ prometheus_install_dir }}/current"
+    state: link
+  become: true
+
+# Создаём директории для конфигов и данных
+- name: Create config and data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: '0755'
+  loop:
+    - "{{ prometheus_install_dir }}/current"
+    - "{{ prometheus_install_dir }}/data"
+    - "/etc/prometheus"
+  become: true
+
+# Генерируем prometheus.yml из шаблона
+- name: Render prometheus configuration
+  template:
+    src: prometheus.yml.j2
+    dest: "/etc/prometheus/prometheus.yml"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: '0644'
+  vars:
+    scrape_configs: "{{ prometheus_scrape_configs }}"
+  become: true
+
+# Системный сервис для Prometheus
+- name: Create systemd unit for Prometheus
+  copy:
+    dest: /etc/systemd/system/prometheus.service
+    content: |
+      [Unit]
+      Description=Prometheus Monitoring
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      User={{ prometheus_user }}
+      Group={{ prometheus_group }}
+      Type=simple
+      ExecStart={{ prometheus_install_dir }}/current/prometheus {{ prometheus_cli_options | join(' ') }}
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: true
+  become: true
+
+- name: Enable and start Prometheus
+  systemd:
+    name: prometheus
+    state: started
+    enabled: true
+  become: true
