@@ -1,0 +1,11 @@
+# Calico Installation manifest for Kubernetes
+# Автоматически подставляем pod_network_cidr
+---
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: default-ipv4-ippool
+spec:
+  cidr: {{ pod_network_cidr }}
+  ipipMode: Always
+  natOutgoing: true
