@@ -1,0 +1,25 @@
+# prometheus.yml — основной файл конфигурации Prometheus
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+{% for job in scrape_configs %}
+  - job_name: '{{ job.job_name }}'
+{% if job.kubernetes_sd_configs is defined %}
+    kubernetes_sd_configs:
+{% for sd in job.kubernetes_sd_configs %}
+      - role: {{ sd.role }}
+{% endfor %}
+{% endif %}
+{% if job.static_configs is defined %}
+    static_configs:
+{% for cfg in job.static_configs %}
+      - targets:
+{% for t in cfg.targets %}
+        - '{{ t }}'
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
