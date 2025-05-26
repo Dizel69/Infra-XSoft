@@ -1,0 +1,27 @@
+---
+# Дефолтные переменные для Prometheus
+
+prometheus_version: "2.41.0"                # версия Prometheus
+prometheus_install_dir: "/opt/prometheus"   # директория установки
+prometheus_user: "prometheus"               # системный пользователь
+prometheus_group: "prometheus"              # системная группа
+
+# List of scrape targets in format job_name: [“host:port”, …]
+prometheus_scrape_configs:
+  - job_name: "kubernetes"
+    kubernetes_sd_configs:
+      - role: node
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+  # добавить другие цели по необходимости
+
+# Правило retention для хранения данных (например, 15d = 15 дней)
+prometheus_retention: "15d"
+
+# Опции запуска (CLI)
+prometheus_cli_options:
+  - "--config.file={{ prometheus_install_dir }}/prometheus.yml"
+  - "--storage.tsdb.path={{ prometheus_install_dir }}/data"
+  - "--web.enable-lifecycle"
+  - "--storage.tsdb.retention.time={{ prometheus_retention }}"
