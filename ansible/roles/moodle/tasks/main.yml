@@ -1,0 +1,117 @@
+---
+# Установка Apache, MySQL/MariaDB, PHP и расширений
+- name: Install LAMP stack packages
+  apt:
+    name:
+      - apache2
+      - mariadb-server
+      - mariadb-client
+      - "{{ php_packages }}"
+    state: present
+    update_cache: yes
+  become: true
+
+# Запустить и включить сервисы
+- name: Ensure Apache is running
+  systemd:
+    name: apache2
+    state: started
+    enabled: true
+  become: true
+
+- name: Ensure MariaDB is running
+  systemd:
+    name: mariadb
+    state: started
+    enabled: true
+  become: true
+
+# Создать базу и пользователя Moodle
+- name: Create Moodle database
+  mysql_db:
+    name: "{{ db_name }}"
+    encoding: "{{ db_charset }}"
+    state: present
+  become: true
+
+- name: Create Moodle DB user
+  mysql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    host: "{{ db_host }}"
+    priv: "{{ db_name }}.*:ALL"
+    state: present
+  become: true
+
+# Скачиваем и распаковываем Moodle
+- name: Download Moodle tarball
+  get_url:
+    url: "{{ moodle_download_url }}"
+    dest: "/tmp/moodle-{{ moodle_version }}.tgz"
+    mode: '0644'
+  become: true
+
+- name: Extract Moodle into web root
+  unarchive:
+    src: "/tmp/moodle-{{ moodle_version }}.tgz"
+    dest: "{{ moodle_install_dir }}/.."
+    remote_src: true
+    creates: "{{ moodle_install_dir }}/version.php"
+  become: true
+
+# Настроить права
+- name: Ensure correct ownership and permissions
+  file:
+    path: "{{ moodle_install_dir }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    recurse: yes
+  become: true
+
+# Скопировать шаблон config.php
+- name: Render Moodle config.php
+  template:
+    src: moodle-config.j2
+    dest: "{{ moodle_install_dir }}/config.php"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  become: true
+
+# Настройка Apache site
+- name: Create Apache vhost for Moodle
+  copy:
+    dest: "{{ apache_conf }}"
+    content: |
+      <VirtualHost *:80>
+        ServerName moodle.{{ domain_name }}
+        DocumentRoot {{ moodle_install_dir }}
+        <Directory {{ moodle_install_dir }}>
+          Options Indexes FollowSymLinks
+          AllowOverride All
+          Require all granted
+        </Directory>
+        ErrorLog ${APACHE_LOG_DIR}/moodle_error.log
+        CustomLog ${APACHE_LOG_DIR}/moodle_access.log combined
+      </VirtualHost>
+  become: true
+
+- name: Enable moodle site and rewrite module
+  apache2_site:
+    name: moodle.conf
+    state: enabled
+  become: true
+
+- name: Enable Apache rewrite module
+  apache2_module:
+    name: rewrite
+    state: present
+  become: true
+
+# Перезапустить Apache
+- name: Reload Apache
+  systemd:
+    name: apache2
+    state: reloaded
+  become: true
