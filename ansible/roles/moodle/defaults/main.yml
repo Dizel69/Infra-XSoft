@@ -1,0 +1,35 @@
+---
+# Дефолтные переменные для роли Moodle
+
+# Moodle
+moodle_version: "4.1.2"                    # версия Moodle
+moodle_download_url: "https://download.moodle.org/stable401/moodle-{{ moodle_version }}.tgz"
+moodle_install_dir: "/var/www/html/moodle" # директория установки
+
+# Веб-сервер и PHP
+apache_conf: "/etc/apache2/sites-available/moodle.conf"
+php_packages:
+  - php
+  - php-gd
+  - php-xml
+  - php-mysql
+  - php-curl
+  - php-zip
+  - php-intl
+  - php-mbstring
+  - libapache2-mod-php
+
+# База данных
+db_name: "moodledb"
+db_user: "moodleuser"
+db_password: "MoodleDbPass123"             # хранить лучше в Vault
+db_host: "localhost"
+db_charset: "utf8mb4"
+
+# URL сайта
+site_url: "http://moodle.{{ domain_name }}"
+
+# Админ
+admin_user: "admin"
+admin_password: "ChangeMe123!"
+admin_email: "admin@{{ domain_name }}"
